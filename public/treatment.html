@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Doctor Treatment Form</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        form { display: inline-block; text-align: left; }
+        input, select { display: block; margin: 10px 0; padding: 8px; width: 100%; }
+        button { background-color: green; color: white; padding: 10px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Doctor Treatment Form</h2>
+    <form id="treatmentForm">
+        <input type="text" id="patientId" placeholder="Patient ID" required>
+        <input type="text" id="doctorId" placeholder="Doctor ID" required>
+        <input type="text" id="disease" placeholder="Disease Name" required>
+        <input type="text" id="dose" placeholder="Dose Description (e.g., 1x3, 2x2)" required>
+        <input type="date" id="treatmentEnd" placeholder="Treatment End Date" required>
+        <select id="stay">
+            <option value="home">Patient Goes Home</option>
+            <option value="hospital">Remain in Hospital</option>
+        </select>
+        <input type="text" id="wardNumber" placeholder="Ward Number (If Staying in Hospital)">
+        <button type="submit">Submit Treatment</button>
+    </form>
+
+    <script>
+        document.getElementById("treatmentForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const data = {
+                patientId: document.getElementById("patientId").value,
+                doctorId: document.getElementById("doctorId").value,
+                disease: document.getElementById("disease").value,
+                dose: document.getElementById("dose").value,
+                treatmentEnd: document.getElementById("treatmentEnd").value,
+                stay: document.getElementById("stay").value,
+                wardNumber: document.getElementById("wardNumber").value,
+            };
+
+            const response = await fetch("/treatment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Nurse Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        table { width: 90%; margin: auto; border-collapse: collapse; }
+        th, td { padding: 10px; border: 1px solid black; text-align: left; }
+        th { background-color: lightgray; }
+        .green { background-color: lightgreen; }
+        .red { background-color: lightcoral; }
+    </style>
+</head>
+<body>
+    <h2>Nurse Dashboard</h2>
+    <a href="history.html">Hospital Dashboard</a><br><a href="nurse.html">Nurse Reminder</a>
+    <table>
+        <thead>
+            <tr>
+                <th>Patient Name</th>
+                <th>Ward Number</th>
+                <th>Dose Description</th>
+                <th>SMS Status</th>
+            </tr>
+        </thead>
+        <tbody id="nurseTable"></tbody>
+    </table>
+
+    <script>
+        async function loadNurseDashboard() {
+            const response = await fetch("/nurse-dashboard");
+            const patients = await response.json();
+            const table = document.getElementById("nurseTable");
+            table.innerHTML = "";
+
+            patients.forEach(patient => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${patient.fullName}</td>
+                    <td>${patient.wardNumber}</td>
+                    <td>${patient.dose || "N/A"}</td>
+                    <td class="${patient.smsSent ? 'green' : 'red'}">${patient.smsSent ? "activated " : "No SMS Sent"}</td>
+
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        loadNurseDashboard();
+    </script>
+</body>
+</html>

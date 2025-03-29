@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Patient Registration</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        form { display: inline-block; text-align: left; }
+        input, select { display: block; margin: 10px 0; padding: 8px; width: 100%; }
+        button { background-color: blue; color: white; padding: 10px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Register Patient</h2>
+    <a href="history.html">Hospital Dashboard</a><br><a href="nurse.html">nurse reminder </a>
+    <form id="registerForm">
+        <input type="text" id="fullName" placeholder="Full Name" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="text" id="phone" placeholder="Phone Number" required>
+        <input type="text" id="patientId" placeholder="Patient ID" required>
+        <input type="number" id="age" placeholder="Age" required>
+        <select id="gender">
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+        </select>
+        <input type="text" id="doctorRoom" placeholder="Doctor Room Number" required>
+        <input type="text" id="homeAddress" placeholder="Home Address" required>
+        <button type="submit">Register</button>
+    </form>
+
+    <script>
+        document.getElementById("registerForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const data = {
+                fullName: document.getElementById("fullName").value,
+                email: document.getElementById("email").value,
+                phone: document.getElementById("phone").value,
+                patientId: document.getElementById("patientId").value,
+                age: document.getElementById("age").value,
+                gender: document.getElementById("gender").value,
+                doctorRoom: document.getElementById("doctorRoom").value,
+                homeAddress: document.getElementById("homeAddress").value,
+            };
+
+            const response = await fetch("/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        });
+    </script>
+</body>
+</html>
