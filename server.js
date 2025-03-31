@@ -78,30 +78,86 @@ app.post("/treatment", async (req, res) => {
 
       if (!patient) return res.status(404).json({ error: "Patient not found!" });
 
-      // Send Email Notification
+      // Extract the last number in the dose (e.g., "3x4" -> 4 times in 12hrs)
+      let doseParts = dose.split("x");
+      let doseCount = parseInt(doseParts[doseParts.length - 1]); 
+      if (isNaN(doseCount) || doseCount <= 0) return res.status(400).json({ error: "Invalid dose format!" });
+
+      // Calculate interval (e.g., 3 hours for 4 doses in 12 hours)
+      let intervalHours = 12 / (doseCount - 1);
+      let intervalMs = intervalHours * 60 * 60 * 1000; // Convert hours to milliseconds
+
+      // Send Immediate Email Notification (First Dose)
       transporter.sendMail({
           from: "leotitogalaxy@gmail.com",
           to: patient.email,
           subject: "MWAHALENDE INTERNATIONAL HOSPITAL - MEDICATION",
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
-              <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-                <h2 style="color: #0275d8; text-align: center;">MWAHALENDE INTERNATIONAL HOSPITAL</h2>
-                <p style="font-size: 16px; color: #333;">Dear <strong>${patient.fullName}</strong>,</p>
-                <p style="font-size: 16px; color: #333;">Your prescribed dose is: <strong>${dose}</strong>.</p>
-                <p style="font-size: 16px; color: #333;">Take your medicine on time for a quick recovery.</p>
-                <hr>
-                <p style="font-size: 14px; text-align: center; color: gray;">This is an automated message. Please do not reply.</p>
-              </div>
-            </div>
-          `,
-      }, async (err, info) => {
-          if (err) return res.status(500).json({ error: "Error sending email." });
-
-          // Mark SMS as sent
-          await Patient.findByIdAndUpdate(patient._id, { smsSent: true });
-          res.json({ message: "Treatment updated & email sent!" });
+          html: `<div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); font-family: Arial, sans-serif;">
+  <div style="background: #d9534f; padding: 10px; text-align: center; color: white; font-size: 20px; font-weight: bold; border-radius: 10px 10px 0 0;">
+    📌 Immediate Medication Dose
+  </div>
+  <div style="padding: 20px; color: #333; font-size: 16px;">
+    <p>Dear <strong>${patient.fullName}</strong>,</p>
+    <p>It’s time to take your first dose of medication.</p>
+    <p><strong>Dose:</strong> ${patient.dose}</p>
+    <div style="background: #f9f9f9; padding: 15px; margin-top: 20px; border-left: 4px solid #d9534f; font-size: 14px; color: #555;">
+      <p><strong>Health Advice:</strong></p>
+      <ul>
+        <li>Drink plenty of water with your medicine.</li>
+        <li>Avoid skipping doses to ensure a speedy recovery.</li>
+        <li>Get enough rest and eat healthy meals.</li>
+        <li>If you experience side effects, consult your doctor immediately.</li>
+      </ul>
+    </div>
+    <p>Stay healthy and take care! 🩺</p>
+  </div>
+  <div style="text-align: center; font-size: 12px; color: gray; padding-top: 15px;">
+    This is an automated message. Please do not reply.
+  </div>
+</div>
+`,
       });
+
+      console.log(`Immediate dose notification sent to ${patient.email}`);
+
+      // Schedule remaining reminders every intervalHours
+      for (let i = 1; i < doseCount; i++) {
+          setTimeout(async () => {
+              transporter.sendMail({
+                  from: "leotitogalaxy@gmail.com",
+                  to: patient.email,
+                  subject: "LEO MWAHALENDE HOSPITAL",
+                  html: `<div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); font-family: Arial, sans-serif;">
+  <div style="background: #f0ad4e; padding: 10px; text-align: center; color: white; font-size: 20px; font-weight: bold; border-radius: 10px 10px 0 0;">
+    ⏰ TIME FOR TAKING DOSE IS NOW!!!
+  </div>
+  <div style="padding: 20px; color: #333; font-size: 16px;">
+    <p>Dear <strong>${patient.fullName}</strong>,</p>
+    <p>It's time to take your next dose of medication.</p>
+    <p><strong>Dose:</strong> ${patient.dose}</p>
+    <div style="background: #f9f9f9; padding: 15px; margin-top: 20px; border-left: 4px solid #f0ad4e; font-size: 14px; color: #555;">
+      <p><strong>Health Advice:</strong></p>
+      <ul>
+        <li>Drink plenty of water with your medicine.</li>
+        <li>Avoid skipping doses to ensure a speedy recovery.</li>
+        <li>Get enough rest and eat healthy meals.</li>
+        <li>If you experience side effects, consult your doctor immediately.</li>
+      </ul>
+    </div>
+    <p>Stay on track with your medication and stay healthy! 💊</p>
+  </div>
+  <div style="text-align: center; font-size: 12px; color: gray; padding-top: 15px;">
+    This is an automated message. Please do not reply.
+  </div>
+</div>`,
+              });
+
+              await Patient.findByIdAndUpdate(patient._id, { smsSent: true });
+              console.log(`Reminder ${i} sent to ${patient.email} at ${new Date(Date.now() + (i * intervalMs)).toLocaleTimeString()}`);
+          }, i * intervalMs);
+      }
+
+      res.json({ message: "Treatment updated & reminderS scheduled!" });
 
   } catch (error) {
       res.status(500).json({ error: error.message });
