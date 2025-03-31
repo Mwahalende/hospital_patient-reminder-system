@@ -172,6 +172,28 @@ cron.schedule("0 8,20 * * *", async () => {  // Runs at 8 AM and 8 PM
   }
 });
 
+// Update patient details
+app.put("/update/:id", async (req, res) => {
+  try {
+      const { id } = req.params;
+      const updatedPatient = await Patient.findByIdAndUpdate(id, req.body, { new: true });
+      if (!updatedPatient) return res.status(404).json({ error: "Patient not found!" });
+      res.json({ message: "Patient updated successfully!", updatedPatient });
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete patient
+app.delete("/delete/:id", async (req, res) => {
+  try {
+      const { id } = req.params;
+      await Patient.findByIdAndDelete(id);
+      res.json({ message: "Patient deleted successfully!" });
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
+});
 
 
 // Start Server
