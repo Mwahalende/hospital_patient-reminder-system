@@ -94,7 +94,7 @@ app.post("/treatment", async (req, res) => {
           subject: "MWAHALENDE INTERNATIONAL HOSPITAL - MEDICATION",
           html: `<div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); font-family: Arial, sans-serif;">
   <div style="background: #d9534f; padding: 10px; text-align: center; color: white; font-size: 20px; font-weight: bold; border-radius: 10px 10px 0 0;">
-    📌 Immediate Medication Dose
+    📌 Immediate Medication Dose.
   </div>
   <div style="padding: 20px; color: #333; font-size: 16px;">
     <p>Dear <strong>${patient.fullName}</strong>,</p>
