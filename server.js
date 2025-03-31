@@ -82,7 +82,7 @@ app.post("/treatment", async (req, res) => {  // Add 'async' here
       transporter.sendMail({
         from: "leotitogalaxy@gmail.com",
         to: patient.email,
-        subject: "Medication Reminder - Mwahalende International Hospital",
+        subject: "MWAHALENDE INTERNATIONAL HOSPITAL-MEDICATION",
         text: `Hello ${patient.fullName},\nYour prescribed dose: ${dose}.\nTake your medicine on time for a quick recovery!`,
       }, async (err, info) => {  // Add 'async' here for the callback
         if (err) {
@@ -131,17 +131,27 @@ app.post("/mark-dosed/:id", async (req, res) => {
 });
 
 // Medication Reminder Scheduler
-cron.schedule("0 */4 * * *", async () => {
+cron.schedule("0 8,20 * * *", async () => {  // Runs at 8 AM and 8 PM
   try {
-    const patients = await Patient.find({});
+    const now = new Date(); // Current date and time
+    const patients = await Patient.find({
+      treatmentEnd: { $gte: now }, // Select only patients with active treatment
+    });
 
     patients.forEach((patient) => {
-      let dosesPerDay = parseInt(patient.dose.split("x")[1]);
-      let intervalHours = 24 / dosesPerDay;
+      if (!patient.dose) return; // Skip if no dose information
 
-      for (let i = 0; i < dosesPerDay; i++) {
-        setTimeout(() => {
-          const smsMessage = `Time to take your medicine! Dose: ${patient.dose}`;
+      let doseParts = patient.dose.split("x"); 
+      if (doseParts.length < 2) return; // Skip if dose format is incorrect
+
+      let dosesPer12Hours = parseInt(doseParts[1]); // Extract last number (e.g., 3 from "1x3")
+      if (isNaN(dosesPer12Hours) || dosesPer12Hours <= 0) return; // Skip if invalid
+
+      let intervalMinutes = (12 * 60) / dosesPer12Hours; // Distribute doses within 12 hours
+
+      for (let i = 0; i < dosesPer12Hours; i++) {
+        setTimeout(async () => {
+          const smsMessage = `Hello ${patient.fullName}, it's time to take your medicine! Dose: ${patient.dose}`;
           transporter.sendMail({
             from: "leotitogalaxy@gmail.com",
             to: patient.email,
@@ -149,18 +159,20 @@ cron.schedule("0 */4 * * *", async () => {
             text: smsMessage,
           });
 
-          // Update SMS sent content in the patient document
-          patient.smsSent = smsMessage;
-          patient.save();
-        }, i * intervalHours * 60 * 60 * 1000);
+          // Update SMS sent log
+          await Patient.findByIdAndUpdate(patient._id, { smsSent: true });
+          console.log(`Reminder sent to ${patient.email} - ${smsMessage}`);
+        }, i * intervalMinutes * 60 * 1000);
       }
     });
 
-    console.log("Medication reminders sent.");
+    console.log("Medication reminders scheduled successfully.");
   } catch (error) {
     console.error("Error sending reminders:", error.message);
   }
 });
+
+
 
 // Start Server
 app.listen(PORT, () => {
