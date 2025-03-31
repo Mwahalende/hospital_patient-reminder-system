@@ -66,38 +66,48 @@ app.post("/register", async (req, res) => {
 
 
 // Doctor Treatment Submission
-app.post("/treatment", async (req, res) => {  // Add 'async' here
-    try {
+app.post("/treatment", async (req, res) => {
+  try {
       const { patientId, doctorId, disease, dose, treatmentEnd, stay, wardNumber } = req.body;
-  
+
       const patient = await Patient.findOneAndUpdate(
-        { patientId },
-        { doctorId, disease, dose, treatmentEnd, stay, wardNumber },
-        { new: true }
+          { patientId },
+          { doctorId, disease, dose, treatmentEnd, stay, wardNumber },
+          { new: true }
       );
-  
+
       if (!patient) return res.status(404).json({ error: "Patient not found!" });
-  
-      // Send Email Notification (Simulating SMS)
+
+      // Send Email Notification
       transporter.sendMail({
-        from: "leotitogalaxy@gmail.com",
-        to: patient.email,
-        subject: "MWAHALENDE INTERNATIONAL HOSPITAL-MEDICATION",
-        text: `Hello ${patient.fullName},\nYour prescribed dose: ${dose}.\nTake your medicine on time for a quick recovery!`,
-      }, async (err, info) => {  // Add 'async' here for the callback
-        if (err) {
-          return res.status(500).json({ error: "Error sending email." });
-        }
-        
-        // After sending email, update the 'smsSent' field in the database
-        await Patient.findByIdAndUpdate(patient._id, { smsSent: true }); // Now using await in an async function
-        res.json({ message: "Treatment updated & email sent!" });
+          from: "leotitogalaxy@gmail.com",
+          to: patient.email,
+          subject: "MWAHALENDE INTERNATIONAL HOSPITAL - MEDICATION",
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
+              <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+                <h2 style="color: #0275d8; text-align: center;">MWAHALENDE INTERNATIONAL HOSPITAL</h2>
+                <p style="font-size: 16px; color: #333;">Dear <strong>${patient.fullName}</strong>,</p>
+                <p style="font-size: 16px; color: #333;">Your prescribed dose is: <strong>${dose}</strong>.</p>
+                <p style="font-size: 16px; color: #333;">Take your medicine on time for a quick recovery.</p>
+                <hr>
+                <p style="font-size: 14px; text-align: center; color: gray;">This is an automated message. Please do not reply.</p>
+              </div>
+            </div>
+          `,
+      }, async (err, info) => {
+          if (err) return res.status(500).json({ error: "Error sending email." });
+
+          // Mark SMS as sent
+          await Patient.findByIdAndUpdate(patient._id, { smsSent: true });
+          res.json({ message: "Treatment updated & email sent!" });
       });
-  
-    } catch (error) {
+
+  } catch (error) {
       res.status(500).json({ error: error.message });
-    }
-  });
+  }
+});
+
   
 // Get Patient History
 app.get("/history", async (req, res) => {
@@ -131,46 +141,57 @@ app.post("/mark-dosed/:id", async (req, res) => {
 });
 
 // Medication Reminder Scheduler
-cron.schedule("0 8,20 * * *", async () => {  // Runs at 8 AM and 8 PM
+cron.schedule("0 8,20 * * *", async () => {
   try {
-    const now = new Date(); // Current date and time
-    const patients = await Patient.find({
-      treatmentEnd: { $gte: now }, // Select only patients with active treatment
-    });
+      const now = new Date();
+      const patients = await Patient.find({
+          treatmentEnd: { $gte: now },
+      });
 
-    patients.forEach((patient) => {
-      if (!patient.dose) return; // Skip if no dose information
+      patients.forEach((patient) => {
+          if (!patient.dose) return;
 
-      let doseParts = patient.dose.split("x"); 
-      if (doseParts.length < 2) return; // Skip if dose format is incorrect
+          let doseParts = patient.dose.split("x");
+          if (doseParts.length < 2) return;
 
-      let dosesPer12Hours = parseInt(doseParts[1]); // Extract last number (e.g., 3 from "1x3")
-      if (isNaN(dosesPer12Hours) || dosesPer12Hours <= 0) return; // Skip if invalid
+          let dosesPer12Hours = parseInt(doseParts[1]);
+          if (isNaN(dosesPer12Hours) || dosesPer12Hours <= 0) return;
 
-      let intervalMinutes = (12 * 60) / dosesPer12Hours; // Distribute doses within 12 hours
+          let intervalMinutes = (12 * 60) / dosesPer12Hours;
 
-      for (let i = 0; i < dosesPer12Hours; i++) {
-        setTimeout(async () => {
-          const smsMessage = `Hello ${patient.fullName}, it's time to take your medicine! Dose: ${patient.dose}`;
-          transporter.sendMail({
-            from: "leotitogalaxy@gmail.com",
-            to: patient.email,
-            subject: "Medication Reminder",
-            text: smsMessage,
-          });
+          for (let i = 0; i < dosesPer12Hours; i++) {
+              setTimeout(async () => {
+                  transporter.sendMail({
+                      from: "leotitogalaxy@gmail.com",
+                      to: patient.email,
+                      subject: "Medication Reminder",
+                      html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
+                          <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+                            <h2 style="color: #d9534f; text-align: center;">Medication Reminder</h2>
+                            <p style="font-size: 16px; color: #333;">Dear <strong>${patient.fullName}</strong>,</p>
+                            <p style="font-size: 16px; color: #333;">It's time to take your medicine!</p>
+                            <p style="font-size: 16px; color: #333;"><strong>Dose:</strong> ${patient.dose}</p>
+                            <p style="font-size: 16px; color: #333;">Please follow the prescribed schedule to stay healthy.</p>
+                            <hr>
+                            <p style="font-size: 14px; text-align: center; color: gray;">This is an automated message. Please do not reply.</p>
+                          </div>
+                        </div>
+                      `,
+                  });
 
-          // Update SMS sent log
-          await Patient.findByIdAndUpdate(patient._id, { smsSent: true });
-          console.log(`Reminder sent to ${patient.email} - ${smsMessage}`);
-        }, i * intervalMinutes * 60 * 1000);
-      }
-    });
+                  await Patient.findByIdAndUpdate(patient._id, { smsSent: true });
+                  console.log(`Reminder sent to ${patient.email}`);
+              }, i * intervalMinutes * 60 * 1000);
+          }
+      });
 
-    console.log("Medication reminders scheduled successfully.");
+      console.log("Medication reminders scheduled successfully.");
   } catch (error) {
-    console.error("Error sending reminders:", error.message);
+      console.error("Error sending reminders:", error.message);
   }
 });
+
 
 // Update patient details
 app.put("/update/:id", async (req, res) => {
